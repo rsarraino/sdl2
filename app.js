@@ -1,57 +1,41 @@
-// Configuração da API do Google Sheets
-const SPREADSHEET_ID = 'seu_id_da_planilha';
-const API_KEY = 'sua_chave_api';
+// app.js
+document.addEventListener("DOMContentLoaded", () => {
+    // Initialize Google API client
+    let script = document.createElement("script");
+    script.src = "https://apis.google.com/js/api.js";
+    script.onload = () => handleClientLoad();
+    document.body.appendChild(script);
 
-// Função para inicializar o escaner de QR code
-function initQRScanner() {
-    const video = document.getElementById('qr-video');
-    const resultDiv = document.getElementById('result');
+    if (document.getElementById("reader")) {
+        const html5QrCode = new Html5Qrcode("reader");
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-        .then(function(stream) {
-            video.srcObject = stream;
-            video.setAttribute('playsinline', true);
-            video.play();
-            requestAnimationFrame(tick);
+        html5QrCode.start(
+            { facingMode: "environment" },
+            {
+                fps: 10, // Scans per second
+                qrbox: { width: 250, height: 250 }
+            },
+            qrCodeMessage => {
+                // Extract ISBN from QR code message
+                document.getElementById("isbn").innerText = `ISBN: ${qrCodeMessage}`;;
+                appendBookData(qrCodeMessage); // Add to Google Sheets
+            },
+            errorMessage => {
+                // Error handling
+                console.warn(errorMessage);
+            })
+        .catch(err => {
+            console.error(err);
         });
 
-    function tick() {
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-            if (code) {
-                console.log("QR Code detectado", code.data);
-                resultDiv.textContent = `ISBN: ${code.data}`;
-                sendToGoogleSheets(code.data);
-            }
-        }
-        requestAnimationFrame(tick);
+        document.getElementById('stop-scanning').addEventListener('click', () => {
+            html5QrCode.stop().then(ignore => {
+                console.log("Scanning stopped.");
+            }).catch(err => console.error("Failed to stop scanning.", err));
+        });
     }
-}
 
-// Função para enviar dados para o Google Sheets
-function sendToGoogleSheets(isbn) {
-    // Implemente a lógica para enviar o ISBN para o Google Sheets usando a API
-    // Você precisará configurar a autenticação e usar a API do Google Sheets
-}
-
-// Função para carregar a lista de livros do Google Sheets
-function loadBookList() {
-    const bookList = document.getElementById('book-list');
-    
-    // Implemente a lógica para carregar os dados do Google Sheets
-    // e preencher a lista de livros
-}
-
-// Inicialização
-if (document.getElementById('qr-video')) {
-    initQRScanner();
-} else if (document.getElementById('book-list')) {
-    loadBookList();
-}
+    if (document.getElementById("book-list")) {
+        listBooks(); // Load book list on list.html
+    }
+});
