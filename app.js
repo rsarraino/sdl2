@@ -1,3 +1,4 @@
+// teste
 // app.js
 document.addEventListener("DOMContentLoaded", () => {
     // Initialize Google API client
